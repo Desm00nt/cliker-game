@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clicker Game</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #0a0a2e;
+            color: #fff;
+            min-height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .particles {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            animation: floatUp 3s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-200px) scale(0); }
+        }
+
+        .click-text {
+            position: absolute;
+            font-weight: 800;
+            font-size: 24px;
+            animation: clickFloat 1s ease-out forwards;
+            pointer-events: none;
+            z-index: 50;
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        @keyframes clickFloat {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-120px) scale(1.5); }
+        }
+
+        .game-container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* HEADER */
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .score-display {
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffd700, #ff6b35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: none;
+            line-height: 1.2;
+        }
+
+        .per-second {
+            font-size: 16px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .level-bar {
+            width: 300px;
+            height: 8px;
+            background: #1a1a4a;
+            border-radius: 4px;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+
+        .level-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6c63ff, #ff6584);
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+
+        .level-text {
+            font-size: 13px;
+            color: #6c63ff;
+            margin-top: 6px;
+        }
+
+        /* CLICK AREA */
+        .click-area {
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .click-btn {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            font-size: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s;
+            position: relative;
+            background: radial-gradient(circle at 30% 30%, #ffd700, #ff8c00, #ff4500);
+            box-shadow:
+                0 0 30px #ffd70050,
+                0 0 60px #ff8c0030,
+                0 10px 30px #00000050;
+        }
+
+        .click-btn:active {
+            transform: scale(0.9);
+        }
+
+        .click-btn:hover {
+            box-shadow:
+                0 0 50px #ffd70080,
+                0 0 80px #ff8c0050,
+                0 10px 30px #00000050;
+        }
+
+        .click-btn .ring {
+            position: absolute;
+            top: -10px; left: -10px; right: -10px; bottom: -10px;
+            border-radius: 50%;
+            border: 3px solid #ffd70040;
+            animation: ringPulse 2s infinite;
+        }
+
+        @keyframes ringPulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 1; }
+        }
+
+        .click-btn .ring2 {
+            position: absolute;
+            top: -20px; left: -20px; right: -20px; bottom: -20px;
+            border-radius: 50%;
+            border: 2px solid #ffd70020;
+            animation: ringPulse 2s infinite 0.5s;
+        }
+
+        /* UPGRADES */
+        .upgrades-container {
+            width: 100%;
+            max-width: 700px;
+            margin-top: 20px;
+        }
+
+        .upgrades-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #6c63ff;
+            text-align: center;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .upgrades-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .upgrade-card {
+            background: #12122a;
+            border: 1px solid #2a2a5a;
+            border-radius: 16px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upgrade-card:hover {
+            border-color: #6c63ff;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px #6c63ff20;
+        }
+
+        .upgrade-card.locked {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .upgrade-card.locked:hover {
+            transform: none;
+            box-shadow: none;
+            border-color: #2a2a5a;
+        }
+
+        .upgrade-card.bought {
+            animation: buyFlash 0.5s;
+        }
+
+        @keyframes buyFlash {
+            0% { background: #6c63ff40; }
+            100% { background: #12122a; }
+        }
+
+        .upgrade-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .upgrade-name {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .upgrade-desc {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+
+        .upgrade-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .upgrade-cost {
+            font-size: 14px;
+            font-weight: 800;
+            color: #ffd700;
+        }
+
+        .upgrade-level {
+            font-size: 11px;
+            color: #6c63ff;
+            background: #6c63ff20;
+            padding: 2px 10px;
+            border-radius: 10px;
+        }
+
+        /* ACHIEVEMENTS */
+        .achievement-popup {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #1a1a4a, #2a1a5a);
+            border: 1px solid #ffd700;
+            border-radius: 16px;
+            padding: 16px 24px;
+            z-index: 100;
+            animation: achieveSlide 0.5s ease-out, achieveFade 0.5s ease-in 3s forwards;
+            box-shadow: 0 0 30px #ffd70030;
+        }
+
+        @keyframes achieveSlide {
+            from { transform: translateX(300px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes achieveFade {
+            to { opacity: 0; transform: translateX(100px); }
+        }
+
+        .achievement-popup .achieve-title {
+            color: #ffd700;
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .achievement-popup .achieve-desc {
+            color: #aaa;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        /* STATS BAR */
+        .stats-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #0f0f2a;
+            border-top: 1px solid #2a2a4a;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            font-size: 12px;
+            color: #888;
+            z-index: 10;
+        }
+
+        .stats-bar span strong {
+            color: #6c63ff;
+        }
+
+        /* COMBO */
+        .combo-display {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            font-size: 20px;
+            font-weight: 800;
+            color: #ff6584;
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .combo-display.active {
+            opacity: 1;
+            animation: comboPulse 0.3s;
+        }
+
+        @keyframes comboPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+
+        /* BACKGROUND GRADIENT */
+        .bg-gradient {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background:
+                radial-gradient(ellipse at 20% 50%, #1a0a3e40 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, #0a1a3e40 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, #3e0a1a20 0%, transparent 50%);
+            z-index: 0;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 600px) {
+            .score-display { font-size: 36px; }
+            .click-btn { width: 140px; height: 140px; font-size: 48px; }
+            .upgrades-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="bg-gradient"></div>
+<div class="particles" id="particles"></div>
+<div class="combo-display" id="combo-display"></div>
+
+<div class="game-container">
+    <div class="header">
+        <div class="score-display" id="score">0</div>
+        <div class="per-second" id="per-second">0 / sec</div>
+        <div class="level-bar"><div class="level-fill" id="level-fill" style="width:0%"></div></div>
+        <div class="level-text" id="level-text">Level 1</div>
+    </div>
+
+    <div class="click-area">
+        <button class="click-btn" id="click-btn" onclick="handleClick(event)">
+            <div class="ring"></div>
+            <div class="ring2"></div>
+            💰
+        </button>
+    </div>
+
+    <div class="upgrades-container">
+        <div class="upgrades-title">Upgrades</div>
+        <div class="upgrades-grid" id="upgrades-grid"></div>
+    </div>
+</div>
+
+<div class="stats-bar">
+    <span>Clicks: <strong id="stat-clicks">0</strong></span>
+    <span>Total: <strong id="stat-total">0</strong></span>
+    <span>CPS: <strong id="stat-cps">0</strong></span>
+    <span>Combo: <strong id="stat-combo">x1</strong></span>
+</div>
+
+<script>
+var game = {
+    score: 0,
+    totalScore: 0,
+    totalClicks: 0,
+    clickPower: 1,
+    autoClick: 0,
+    combo: 0,
+    comboMultiplier: 1,
+    lastClickTime: 0,
+    level: 1,
+    xp: 0,
+    xpNeeded: 100
+};
+
+var upgrades = [
+    { id: 'power1', name: 'Strong Finger', icon: '👆', desc: '+1 click power', baseCost: 15, costMult: 1.5, level: 0, maxLevel: 50, effect: function() { game.clickPower += 1; } },
+    { id: 'power2', name: 'Double Tap', icon: '✌️', desc: '+3 click power', baseCost: 100, costMult: 1.6, level: 0, maxLevel: 30, effect: function() { game.clickPower += 3; } },
+    { id: 'auto1', name: 'Auto Clicker', icon: '🤖', desc: '+1 per second', baseCost: 50, costMult: 1.4, level: 0, maxLevel: 50, effect: function() { game.autoClick += 1; } },
+    { id: 'auto2', name: 'Robot Army', icon: '🦾', desc: '+5 per second', baseCost: 300, costMult: 1.5, level: 0, maxLevel: 30, effect: function() { game.autoClick += 5; } },
+    { id: 'auto3', name: 'AI Farm', icon: '🧠', desc: '+20 per second', baseCost: 2000, costMult: 1.6, level: 0, maxLevel: 20, effect: function() { game.autoClick += 20; } },
+    { id: 'power3', name: 'Golden Touch', icon: '✨', desc: '+10 click power', baseCost: 500, costMult: 1.7, level: 0, maxLevel: 20, effect: function() { game.clickPower += 10; } },
+    { id: 'auto4', name: 'Money Factory', icon: '🏭', desc: '+50 per second', baseCost: 10000, costMult: 1.7, level: 0, maxLevel: 15, effect: function() { game.autoClick += 50; } },
+    { id: 'power4', name: 'Diamond Hands', icon: '💎', desc: '+50 click power', baseCost: 5000, costMult: 1.8, level: 0, maxLevel: 15, effect: function() { game.clickPower += 50; } },
+    { id: 'auto5', name: 'Crypto Mine', icon: '⛏️', desc: '+200 per second', baseCost: 50000, costMult: 1.8, level: 0, maxLevel: 10, effect: function() { game.autoClick += 200; } },
+    { id: 'power5', name: 'Midas Touch', icon: '👑', desc: '+200 click power', baseCost: 25000, costMult: 1.9, level: 0, maxLevel: 10, effect: function() { game.clickPower += 200; } },
+    { id: 'auto6', name: 'Space Station', icon: '🛸', desc: '+1000 per second', baseCost: 500000, costMult: 2.0, level: 0, maxLevel: 5, effect: function() { game.autoClick += 1000; } },
+    { id: 'power6', name: 'Universe Power', icon: '🌌', desc: '+1000 click power', baseCost: 250000, costMult: 2.0, level: 0, maxLevel: 5, effect: function() { game.clickPower += 1000; } }
+];
+
+var achievements = [
+    { id: 'click100', name: 'Beginner', desc: '100 clicks', check: function() { return game.totalClicks >= 100; }, shown: false },
+    { id: 'click1000', name: 'Clicker Pro', desc: '1000 clicks', check: function() { return game.totalClicks >= 1000; }, shown: false },
+    { id: 'score1000', name: 'First Grand', desc: 'Earn 1000 coins', check: function() { return game.totalScore >= 1000; }, shown: false },
+    { id: 'score100k', name: 'Rich!', desc: 'Earn 100K coins', check: function() { return game.totalScore >= 100000; }, shown: false },
+    { id: 'score1m', name: 'Millionaire', desc: 'Earn 1M coins', check: function() { return game.totalScore >= 1000000; }, shown: false },
+    { id: 'combo10', name: 'Combo Master', desc: 'Get x10 combo', check: function() { return game.comboMultiplier >= 10; }, shown: false },
+    { id: 'level10', name: 'Leveled Up', desc: 'Reach level 10', check: function() { return game.level >= 10; }, shown: false },
+    { id: 'level50', name: 'Veteran', desc: 'Reach level 50', check: function() { return game.level >= 50; }, shown: false }
+];
+
+function formatNumber(n) {
+    if (n >= 1000000000) return (n / 1000000000).toFixed(1) + 'B';
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+    return Math.floor(n).toString();
+}
+
+function getCost(upgrade) {
+    return Math.floor(upgrade.baseCost * Math.pow(upgrade.costMult, upgrade.level));
+}
+
+function handleClick(event) {
+    var now = Date.now();
+    var timeDiff = now - game.lastClickTime;
+    game.lastClickTime = now;
+
+    // Combo system
+    if (timeDiff < 500) {
+        game.combo++;
+        game.comboMultiplier = 1 + Math.floor(game.combo / 5);
+        if (game.comboMultiplier > 50) game.comboMultiplier = 50;
+    } else {
+        game.combo = 0;
+        game.comboMultiplier = 1;
+    }
+
+    var earned = game.clickPower * game.comboMultiplier;
+    game.score += earned;
+    game.totalScore += earned;
+    game.totalClicks++;
+
+    // XP
+    game.xp += earned;
+    while (game.xp >= game.xpNeeded) {
+        game.xp -= game.xpNeeded;
+        game.level++;
+        game.xpNeeded = Math.floor(100 * Math.pow(1.5, game.level - 1));
+        showAchievement('Level Up!', 'Reached level ' + game.level);
+    }
+
+    // Click text animation
+    spawnClickText(event.clientX, event.clientY, '+' + formatNumber(earned));
+
+    // Particles
+    spawnParticles(event.clientX, event.clientY, 5);
+
+    // Update combo display
+    var comboEl = document.getElementById('combo-display');
+    if (game.comboMultiplier > 1) {
+        comboEl.textContent = 'COMBO x' + game.comboMultiplier;
+        comboEl.classList.add('active');
+        comboEl.style.fontSize = Math.min(20 + game.comboMultiplier * 2, 48) + 'px';
+    } else {
+        comboEl.classList.remove('active');
+    }
+
+    updateUI();
+    checkAchievements();
+    saveGame();
+}
+
+function spawnClickText(x, y, text) {
+    var el = document.createElement('div');
+    el.className = 'click-text';
+    el.textContent = text;
+
+    var colors = ['#ffd700', '#ff6b35', '#ff6584', '#6c63ff', '#00c853'];
+    el.style.color = colors[Math.floor(Math.random() * colors.length)];
+    el.style.left = (x - 30 + Math.random() * 60) + 'px';
+    el.style.top = (y - 20) + 'px';
+
+    document.body.appendChild(el);
+    setTimeout(function() { el.remove(); }, 1000);
+}
+
+function spawnParticles(x, y, count) {
+    var container = document.getElementById('particles');
+    for (var i = 0; i < count; i++) {
+        var p = document.createElement('div');
+        p.className = 'particle';
+        var size = 4 + Math.random() * 8;
+        var colors = ['#ffd700', '#ff6b35', '#ff6584', '#6c63ff', '#00c853'];
+        p.style.width = size + 'px';
+        p.style.height = size + 'px';
+        p.style.background = colors[Math.floor(Math.random() * colors.length)];
+        p.style.left = (x - 10 + Math.random() * 20) + 'px';
+        p.style.top = (y - 10 + Math.random() * 20) + 'px';
+        p.style.animationDuration = (1 + Math.random() * 2) + 's';
+        container.appendChild(p);
+        setTimeout(function() { p.remove(); }, 3000);
+    }
+}
+
+function buyUpgrade(index) {
+    var upgrade = upgrades[index];
+    var cost = getCost(upgrade);
+
+    if (game.score < cost) return;
+    if (upgrade.level >= upgrade.maxLevel) return;
+
+    game.score -= cost;
+    upgrade.level++;
+    upgrade.effect();
+
+    var card = document.querySelectorAll('.upgrade-card')[index];
+    if (card) {
+        card.classList.add('bought');
+        setTimeout(function() { card.classList.remove('bought'); }, 500);
+    }
+
+    updateUI();
+    renderUpgrades();
+    saveGame();
+}
+
+function renderUpgrades() {
+    var grid = document.getElementById('upgrades-grid');
+    var html = '';
+
+    upgrades.forEach(function(u, i) {
+        var cost = getCost(u);
+        var locked = game.score < cost;
+        var maxed = u.level >= u.maxLevel;
+        var cls = 'upgrade-card';
+        if (locked && !maxed) cls += ' locked';
+
+        html += '<div class="' + cls + '" onclick="buyUpgrade(' + i + ')">';
+        html += '<div class="upgrade-icon">' + u.icon + '</div>';
+        html += '<div class="upgrade-name">' + u.name + '</div>';
+        html += '<div class="upgrade-desc">' + u.desc + '</div>';
+        html += '<div class="upgrade-bottom">';
+        if (maxed) {
+            html += '<span class="upgrade-cost" style="color:#00c853">MAX</span>';
+        } else {
+            html += '<span class="upgrade-cost">' + formatNumber(cost) + ' 💰</span>';
+        }
+        html += '<span class="upgrade-level">Lv.' + u.level + '</span>';
+        html += '</div></div>';
+    });
+
+    grid.innerHTML = html;
+}
+
+function updateUI() {
+    document.getElementById('score').textContent = formatNumber(game.score);
+    document.getElementById('per-second').textContent = formatNumber(game.autoClick) + ' / sec';
+    document.getElementById('stat-clicks').textContent = formatNumber(game.totalClicks);
+    document.getElementById('stat-total').textContent = formatNumber(game.totalScore);
+    document.getElementById('stat-cps').textContent = formatNumber(game.autoClick);
+    document.getElementById('stat-combo').textContent = 'x' + game.comboMultiplier;
+
+    var xpPercent = (game.xp / game.xpNeeded * 100).toFixed(1);
+    document.getElementById('level-fill').style.width = xpPercent + '%';
+    document.getElementById('level-text').textContent = 'Level ' + game.level + ' (' + xpPercent + '%)';
+
+    document.title = formatNumber(game.score) + ' coins - Clicker';
+}
+
+function showAchievement(title, desc) {
+    var popup = document.createElement('div');
+    popup.className = 'achievement-popup';
+    popup.innerHTML = '<div class="achieve-title">🏆 ' + title + '</div><div class="achieve-desc">' + desc + '</div>';
+    document.body.appendChild(popup);
+    setTimeout(function() { popup.remove(); }, 4000);
+}
+
+function checkAchievements() {
+    achievements.forEach(function(a) {
+        if (!a.shown && a.check()) {
+            a.shown = true;
+            showAchievement(a.name, a.desc);
+        }
+    });
+}
+
+function saveGame() {
+    var save = {
+        score: game.score,
+        totalScore: game.totalScore,
+        totalClicks: game.totalClicks,
+        clickPower: game.clickPower,
+        autoClick: game.autoClick,
+        level: game.level,
+        xp: game.xp,
+        xpNeeded: game.xpNeeded,
+        upgradeLevels: upgrades.map(function(u) { return u.level; }),
+        achievementsShown: achievements.map(function(a) { return a.shown; })
+    };
+    localStorage.setItem('clickerSave', JSON.stringify(save));
+}
+
+function loadGame() {
+    try {
+        var save = JSON.parse(localStorage.getItem('clickerSave'));
+        if (!save) return;
+
+        game.score = save.score || 0;
+        game.totalScore = save.totalScore || 0;
+        game.totalClicks = save.totalClicks || 0;
+        game.level = save.level || 1;
+        game.xp = save.xp || 0;
+        game.xpNeeded = save.xpNeeded || 100;
+
+        // Reset computed values
+        game.clickPower = 1;
+        game.autoClick = 0;
+
+        // Apply upgrades
+        if (save.upgradeLevels) {
+            save.upgradeLevels.forEach(function(lvl, i) {
+                if (upgrades[i]) {
+                    upgrades[i].level = lvl;
+                    for (var j = 0; j < lvl; j++) {
+                        upgrades[i].effect();
+                    }
+                }
+            });
+        }
+
+        if (save.achievementsShown) {
+            save.achievementsShown.forEach(function(shown, i) {
+                if (achievements[i]) achievements[i].shown = shown;
+            });
+        }
+    } catch(e) {
+        console.log('Failed to load save');
+    }
+}
+
+// Auto click
+setInterval(function() {
+    if (game.autoClick > 0) {
+        game.score += game.autoClick;
+        game.totalScore += game.autoClick;
+        game.xp += game.autoClick;
+
+        while (game.xp >= game.xpNeeded) {
+            game.xp -= game.xpNeeded;
+            game.level++;
+            game.xpNeeded = Math.floor(100 * Math.pow(1.5, game.level - 1));
+        }
+
+        updateUI();
+        checkAchievements();
+    }
+}, 1000);
+
+// Auto save
+setInterval(saveGame, 10000);
+
+// Update upgrades display
+setInterval(renderUpgrades, 2000);
+
+// Combo decay
+setInterval(function() {
+    if (Date.now() - game.lastClickTime > 2000) {
+        game.combo = 0;
+        game.comboMultiplier = 1;
+        document.getElementById('combo-display').classList.remove('active');
+    }
+}, 500);
+
+// Background particles
+setInterval(function() {
+    var p = document.createElement('div');
+    p.className = 'particle';
+    var size = 2 + Math.random() * 4;
+    p.style.width = size + 'px';
+    p.style.height = size + 'px';
+    p.style.background = '#6c63ff30';
+    p.style.left = Math.random() * window.innerWidth + 'px';
+    p.style.top = window.innerHeight + 'px';
+    p.style.animationDuration = (4 + Math.random() * 4) + 's';
+    document.getElementById('particles').appendChild(p);
+    setTimeout(function() { p.remove(); }, 8000);
+}, 300);
+
+// Init
+loadGame();
+renderUpgrades();
+updateUI();
+</script>
+</body>
+</html>
